@@ -81,6 +81,6 @@
    (get-image url default-input-chan))
   ([url input-chan]
    (go
-    (let [resp (<! (get-url url {:buffer? true}))]
+    (let [resp (<! (get-url url {:buffer? true} input-chan))]
       (when (= (:status resp) 200)
         (:body resp))))))
