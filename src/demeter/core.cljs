@@ -53,9 +53,11 @@
       (when-let [input (<! input-chan)]
         ;TODO: Schema to ensure input has a URL and a resp-chan
         (let [scrape-fn (if js? get-js-url-direct get-url-direct)
+              output-chan (:output-chan input)
               resp (<! (scrape-fn (:url input) (:opts input)))]
-          (>! (:output-chan input)
-              (merge input resp)))
+          (>! output-chan
+              (merge input resp))
+          (when (:close-output? input) (close! output-chan)))
         (recur))))))
 
 (defn init-js-scrapers!
@@ -72,8 +74,7 @@
   ([url opts input-chan]
    (let [channel (chan 1)]
      (go
-      (>! input-chan {:url url :output-chan channel :opts opts})
-      (close! channel))
+      (>! input-chan {:url url :output-chan channel :opts opts :close-output? true}))
      channel)))
 
 (defn get-image
