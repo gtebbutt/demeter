@@ -33,9 +33,11 @@
         (close! channel))))
     channel))
 
+(def prerender-prefix (str "http://localhost:" settings/prerender-port "/"))
+
 (defn get-js-url-direct
   [url opts]
-  (get-url-direct (str "http://localhost:" settings/prerender-port "/" url)
+  (get-url-direct (str prerender-prefix url)
                   (merge {:timeout settings/js-page-timeout}
                          opts)))
 
