@@ -26,9 +26,11 @@
     channel))
 
 (defn save-image
-  [url filename bucket]
-  (go
-   (if-let [body (<! (core/get-image url))]
-     (<! (write body filename bucket :public))
+  ([url filename bucket]
+   (save-image url filename bucket core/default-input-chan))
+  ([url filename bucket input-chan]
+   (go
+    (if-let [body (<! (core/get-image url input-chan))]
+      (<! (write body filename bucket :public))
 
-     {:error :request-failed})))
+      {:error :request-failed}))))
