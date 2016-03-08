@@ -5,7 +5,7 @@
             [demeter.logging :as log]
             [demeter.settings :as settings]))
 
-(def request (nodejs/require "requestretry"))
+(def request (atom (nodejs/require "requestretry")))
 
 (defn get-url-direct
   [url {:keys [buffer? timeout] :as opts}]
@@ -15,7 +15,7 @@
                 :uri url
                 :gzip true
                 :timeout (or timeout settings/default-timeout)}]
-    (request
+    (@request
      (clj->js
       (if buffer?
         (assoc params :encoding nil)
