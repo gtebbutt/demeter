@@ -7,14 +7,18 @@
 
 (def request (atom (nodejs/require "requestretry")))
 
+(def default-opts (atom {}))
+
 (defn get-url-direct
   [url {:keys [buffer? timeout] :as opts}]
   (log/debug "Getting " url)
   (let [channel (chan)
-        params {:method "GET"
-                :uri url
-                :gzip true
-                :timeout (or timeout settings/default-timeout)}]
+        params (merge
+                 {:method "GET"
+                  :uri url
+                  :gzip true
+                  :timeout (or timeout settings/default-timeout)}
+                 @default-opts)]
     (@request
      (clj->js
       (if buffer?
