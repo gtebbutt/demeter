@@ -49,13 +49,17 @@
 
 (defn init-scrapers!
   ([concurrency]
-   (init-scrapers! concurrency default-input-chan false))
+   (init-scrapers! concurrency default-input-chan false nil))
   ([concurrency input-chan]
-   (init-scrapers! concurrency input-chan false))
+   (init-scrapers! concurrency input-chan false nil))
   ([concurrency input-chan js?]
+   (init-scrapers! concurrency input-chan js? nil))
+  ([concurrency input-chan js? rate-limit]
    (dotimes [_ concurrency]
      (go-loop
       []
+      (when rate-limit
+        (<! (cljs.core.async/timeout rate-limit)))
       (when-let [input (<! input-chan)]
         ;TODO: Schema to ensure input has a URL and a resp-chan
         (let [scrape-fn (if js? get-js-url-direct get-url-direct)
