@@ -20,21 +20,21 @@
                   :timeout (or timeout settings/default-timeout)}
                  @default-opts)]
     (@request
-     (clj->js
-      (if buffer?
-        (assoc params :encoding nil)
-        params))
-     (fn [err resp body]
-       (go
-        (if err
-          (>! channel {:error err
-                       :input-url url})
-          (>! channel {:status (.-statusCode resp)
-                       :url (.. resp -request -uri -href)
-                       :input-url url
-                       :headers (js->clj (.-headers resp) :keywordize-keys true)
-                       :body body}))
-        (close! channel))))
+      (clj->js
+        (if buffer?
+          (assoc params :encoding nil)
+          params))
+      (fn [err resp body]
+        (go
+          (if err
+            (>! channel {:error err
+                         :input-url url})
+            (>! channel {:status (.-statusCode resp)
+                         :url (.. resp -request -uri -href)
+                         :input-url url
+                         :headers (js->clj (.-headers resp) :keywordize-keys true)
+                         :body body}))
+          (close! channel))))
     channel))
 
 (def prerender-prefix (str "http://localhost:" settings/prerender-port "/"))
@@ -45,11 +45,7 @@
                   (merge {:timeout settings/js-page-timeout}
                          opts)))
 
-(defonce default-input-chan (chan))
-
 (defn init-scrapers!
-  ([concurrency]
-   (init-scrapers! concurrency default-input-chan false nil))
   ([concurrency input-chan]
    (init-scrapers! concurrency input-chan false nil))
   ([concurrency input-chan js?]
@@ -57,41 +53,37 @@
   ([concurrency input-chan js? rate-limit]
    (dotimes [_ concurrency]
      (go-loop
-      []
-      (when rate-limit
-        (<! (cljs.core.async/timeout rate-limit)))
-      (when-let [input (<! input-chan)]
-        ;TODO: Schema to ensure input has a URL and a resp-chan
-        (let [scrape-fn (if js? get-js-url-direct get-url-direct)
-              output-chan (:output-chan input)
-              resp (<! (scrape-fn (:url input) (:opts input)))]
-          (>! output-chan
-              (merge input resp))
-          (when (:close-output? input) (close! output-chan)))
-        (recur))))))
+       []
+       (when rate-limit
+         (<! (cljs.core.async/timeout rate-limit)))
+       (when-let [input (<! input-chan)]
+         ;TODO: Schema to ensure input has a URL and a resp-chan
+         (let [scrape-fn (if js? get-js-url-direct get-url-direct)
+               output-chan (:output-chan input)
+               resp (<! (scrape-fn (:url input) (:opts input)))]
+           (>! output-chan
+               (merge input resp))
+           (when (:close-output? input) (close! output-chan)))
+         (recur))))))
 
 (defn init-js-scrapers!
-  ([concurrency]
-   (init-scrapers! concurrency default-input-chan true))
   ([concurrency input-chan]
-   (init-scrapers! concurrency input-chan true)))
+   (init-js-scrapers! concurrency input-chan nil))
+  ([concurrency input-chan rate-limit]
+   (init-scrapers! concurrency input-chan true rate-limit)))
 
 (defn get-url
-  ([url]
-   (get-url url nil default-input-chan))
-  ([url opts]
-   (get-url url opts default-input-chan))
+  ([url input-chan]
+   (get-url url nil input-chan))
   ([url opts input-chan]
    (let [channel (chan 1)]
      (go
-      (>! input-chan {:url url :output-chan channel :opts opts :close-output? true}))
+       (>! input-chan {:url url :output-chan channel :opts opts :close-output? true}))
      channel)))
 
 (defn get-image
-  ([url]
-   (get-image url default-input-chan))
-  ([url input-chan]
-   (go
+  [url input-chan]
+  (go
     (let [resp (<! (get-url url {:buffer? true} input-chan))]
       (when (= (:status resp) 200)
-        (:body resp))))))
+        (:body resp)))))
